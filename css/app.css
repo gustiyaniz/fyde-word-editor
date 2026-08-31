@@ -1,0 +1,104 @@
+:root{
+  --word-blue:#185abd;
+  --word-blue-dark:#0f4c9c;
+  --border:#d8d8d8;
+  --text:#222;
+  --workspace:#e8e8e8;
+  --paper:#fff;
+  --status:#f3f3f3;
+  --ribbon:#fafafa;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Segoe UI",Arial,sans-serif;color:var(--text);background:var(--workspace)}
+body{overflow:hidden}
+button,select,input{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+
+#app{height:100vh;display:grid;grid-template-rows:42px 36px 108px auto 28px 1fr 28px;min-height:0}
+.titlebar{display:flex;align-items:center;background:var(--word-blue);color:#fff;padding:0 10px;gap:16px}
+.app-mark{display:flex;align-items:center;gap:8px;min-width:150px}
+.word-logo{display:grid;place-items:center;width:30px;height:30px;background:#fff;color:var(--word-blue);font-weight:700;border-radius:2px}
+.app-name{font-size:14px;font-weight:600}
+.document-title-wrap{flex:1;display:flex;justify-content:center;align-items:center;gap:10px}
+.document-title{width:min(420px,45vw);text-align:center;color:#fff;background:transparent;border:1px solid transparent;border-radius:3px;padding:5px}
+.document-title:hover,.document-title:focus{border-color:#8db6ec;outline:none;background:rgba(255,255,255,.08)}
+.save-state{font-size:11px;opacity:.8}
+.titlebar-actions{display:flex;gap:4px}
+.title-btn{border:0;color:#fff;background:transparent;padding:7px 10px;border-radius:3px}
+.title-btn:hover{background:rgba(255,255,255,.15)}
+
+.tabs{display:flex;align-items:end;background:#fff;padding:0 8px;border-bottom:1px solid var(--border)}
+.tab-btn{height:36px;border:0;background:transparent;padding:0 16px}
+.tab-btn:hover{background:#f2f2f2}
+.tab-btn.active{color:var(--word-blue);border-bottom:3px solid var(--word-blue)}
+
+.ribbon{background:var(--ribbon);border-bottom:1px solid #cfcfcf;min-height:108px;overflow-x:auto}
+.ribbon-panel{display:none;height:108px;align-items:stretch;padding:4px 8px}
+.ribbon-panel.active{display:flex}
+.ribbon-group{position:relative;display:flex;align-items:center;gap:5px;padding:5px 10px 19px;border-right:1px solid #d9d9d9;min-width:max-content}
+.ribbon-group button,.ribbon-group select{border:1px solid transparent;background:transparent;padding:5px 7px;border-radius:2px}
+.ribbon-group button:hover,.ribbon-group select:hover{border-color:#c8d9f1;background:#eaf2fb}
+.group-label{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:10px;color:#666}
+.big-action{height:66px;min-width:55px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.big-icon{font-size:24px}
+.small-stack{display:flex;flex-direction:column}
+.button-row{display:flex;gap:2px}
+.color-tool{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:28px;border:1px solid transparent}
+.color-tool input{position:absolute;inset:auto 2px 1px 2px;height:4px;width:26px;border:0;padding:0}
+.styles-group{gap:4px}
+.style-tile{display:flex!important;flex-direction:column;justify-content:center;width:94px;height:50px;text-align:left;background:#fff!important;border:1px solid #ddd!important}
+.style-tile small{font-size:10px;color:#666}
+.file-actions{align-items:center}
+.file-btn{min-width:74px;height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px}
+.file-btn span{font-size:11px;margin-top:4px}
+.layout-control{font-size:11px;display:flex;flex-direction:column;gap:4px}
+
+.findbar{position:absolute;z-index:20;top:190px;right:26px;background:#fff;border:1px solid #bbb;box-shadow:0 3px 12px rgba(0,0,0,.2);padding:7px;display:flex;gap:4px}
+.findbar input{width:220px;padding:6px;border:1px solid #bbb}
+
+.ruler{height:28px;background:#f8f8f8;border-bottom:1px solid #d0d0d0;color:#777;display:flex;justify-content:center;gap:28px;font-size:10px;align-items:end;padding-bottom:4px;overflow:hidden}
+
+.workspace{overflow:auto;background:var(--workspace);padding:28px 24px 80px;display:flex;justify-content:center;align-items:flex-start}
+.workspace.no-shadow .page{box-shadow:none}
+.page{width:210mm;min-height:297mm;background:var(--paper);box-shadow:0 2px 10px rgba(0,0,0,.22);transform-origin:top center;transition:width .15s ease}
+.page[data-orientation="landscape"]{width:297mm;min-height:210mm}
+.editor{min-height:calc(297mm - 50.8mm);outline:none;padding:25.4mm;line-height:1.15;font-family:Calibri,Arial,sans-serif;font-size:11pt;white-space:normal;overflow-wrap:anywhere}
+.page[data-orientation="landscape"] .editor{min-height:calc(210mm - 50.8mm)}
+.editor p{margin:0 0 8pt}
+.editor h1{font-family:Calibri,Arial,sans-serif;font-weight:300;color:#2f5496;font-size:20pt;margin:12pt 0 6pt}
+.editor h2{font-family:Calibri,Arial,sans-serif;font-weight:300;color:#2f5496;font-size:16pt;margin:10pt 0 5pt}
+.editor table{border-collapse:collapse;max-width:100%}
+.editor td,.editor th{border:1px solid #555;padding:6px;min-width:40px}
+.editor img{max-width:100%;height:auto}
+.page-break{border:0;border-top:2px dashed #aaa;margin:24px 0;page-break-after:always}
+
+.statusbar{display:flex;align-items:center;justify-content:space-between;background:var(--status);border-top:1px solid #d0d0d0;padding:0 12px;font-size:11px;z-index:4}
+.statusbar>div{display:flex;gap:16px;align-items:center}
+.zoom-wrap{gap:5px!important}
+.zoom-wrap button{border:0;background:transparent}
+.zoom-wrap input{width:110px}
+
+.toast{position:fixed;z-index:99;left:50%;bottom:46px;transform:translateX(-50%);background:#242424;color:#fff;padding:9px 14px;border-radius:4px;font-size:12px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+
+body.focus-mode .titlebar,
+body.focus-mode .tabs,
+body.focus-mode .ribbon,
+body.focus-mode .ruler{display:none}
+body.focus-mode #app{grid-template-rows:1fr 28px}
+
+@media (max-width:900px){
+  .save-state{display:none}
+  .app-name{display:none}
+  .app-mark{min-width:38px}
+  .workspace{justify-content:flex-start}
+}
+
+@media print{
+  body{overflow:visible;background:#fff}
+  .titlebar,.tabs,.ribbon,.findbar,.ruler,.statusbar{display:none!important}
+  #app{display:block;height:auto}
+  .workspace{display:block;overflow:visible;padding:0;background:#fff}
+  .page{box-shadow:none;transform:none!important;margin:0;width:auto;min-height:auto}
+  .editor{padding:0}
+}

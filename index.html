@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#185ABD" />
+  <meta name="description" content="Fyde Word - editor dokumen offline bergaya Microsoft Word untuk FydeOS" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./css/app.css" />
+  <title>Fyde Word</title>
+</head>
+<body>
+  <div id="app">
+    <header class="titlebar">
+      <div class="app-mark" aria-label="Fyde Word">
+        <span class="word-logo">W</span>
+        <span class="app-name">Fyde Word</span>
+      </div>
+
+      <div class="document-title-wrap">
+        <input id="documentTitle" class="document-title" value="Document1" aria-label="Nama dokumen" />
+        <span id="saveState" class="save-state">Tersimpan lokal</span>
+      </div>
+
+      <div class="titlebar-actions">
+        <button id="installBtn" class="title-btn hidden" title="Install aplikasi">Install</button>
+        <button id="fullscreenBtn" class="title-btn" title="Fullscreen">⛶</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Ribbon tabs">
+      <button class="tab-btn active" data-tab="home">Home</button>
+      <button class="tab-btn" data-tab="file">File</button>
+      <button class="tab-btn" data-tab="insert">Insert</button>
+      <button class="tab-btn" data-tab="layout">Layout</button>
+      <button class="tab-btn" data-tab="view">View</button>
+    </nav>
+
+    <section class="ribbon">
+      <div class="ribbon-panel active" id="tab-home">
+        <div class="ribbon-group">
+          <button class="big-action" id="pasteBtn"><span class="big-icon">📋</span><span>Paste</span></button>
+          <div class="small-stack">
+            <button data-command="cut">Cut</button>
+            <button data-command="copy">Copy</button>
+          </div>
+          <div class="group-label">Clipboard</div>
+        </div>
+
+        <div class="ribbon-group">
+          <select id="fontName" title="Font">
+            <option value="Arial">Arial</option>
+            <option value="Calibri" selected>Calibri</option>
+            <option value="Cambria">Cambria</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+          </select>
+          <select id="fontSize" title="Ukuran font">
+            <option>8</option><option>9</option><option>10</option><option selected>11</option>
+            <option>12</option><option>14</option><option>16</option><option>18</option>
+            <option>20</option><option>24</option><option>28</option><option>32</option>
+            <option>36</option><option>48</option><option>72</option>
+          </select>
+          <div class="button-row">
+            <button data-command="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button data-command="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+            <button data-command="strikeThrough" title="Strikethrough"><s>ab</s></button>
+            <label class="color-tool" title="Warna teks">A<input id="foreColor" type="color" value="#000000" /></label>
+            <label class="color-tool highlight" title="Highlight">🖍<input id="hiliteColor" type="color" value="#fff200" /></label>
+          </div>
+          <div class="group-label">Font</div>
+        </div>
+
+        <div class="ribbon-group">
+          <div class="button-row">
+            <button data-command="insertUnorderedList" title="Bullets">• List</button>
+            <button data-command="insertOrderedList" title="Numbering">1. List</button>
+          </div>
+          <div class="button-row">
+            <button data-command="justifyLeft" title="Align left">≡</button>
+            <button data-command="justifyCenter" title="Center">≡</button>
+            <button data-command="justifyRight" title="Align right">≡</button>
+            <button data-command="justifyFull" title="Justify">☰</button>
+          </div>
+          <div class="button-row">
+            <button data-command="outdent" title="Kurangi indent">⇤</button>
+            <button data-command="indent" title="Tambah indent">⇥</button>
+          </div>
+          <div class="group-label">Paragraph</div>
+        </div>
+
+        <div class="ribbon-group styles-group">
+          <button class="style-tile" data-block="p"><strong>Normal</strong><small>Calibri 11</small></button>
+          <button class="style-tile" data-block="h1"><strong>Heading 1</strong><small>Calibri Light</small></button>
+          <button class="style-tile" data-block="h2"><strong>Heading 2</strong><small>Calibri Light</small></button>
+          <div class="group-label">Styles</div>
+        </div>
+
+        <div class="ribbon-group">
+          <div class="button-row">
+            <button data-command="undo" title="Undo (Ctrl+Z)">↶</button>
+            <button data-command="redo" title="Redo (Ctrl+Y)">↷</button>
+            <button id="findBtn" title="Find (Ctrl+F)">Find</button>
+          </div>
+          <div class="group-label">Editing</div>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="tab-file">
+        <div class="ribbon-group file-actions">
+          <button id="newBtn" class="file-btn">📄<span>New</span></button>
+          <button id="openBtn" class="file-btn">📂<span>Open</span></button>
+          <button id="saveBtn" class="file-btn">💾<span>Save</span></button>
+          <button id="saveAsBtn" class="file-btn">🗂️<span>Save As</span></button>
+          <button id="exportHtmlBtn" class="file-btn">🌐<span>Export HTML</span></button>
+          <button id="printBtn" class="file-btn">🖨️<span>Print</span></button>
+          <div class="group-label">Document</div>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="tab-insert">
+        <div class="ribbon-group">
+          <button id="insertImageBtn" class="file-btn">🖼️<span>Picture</span></button>
+          <button id="insertLinkBtn" class="file-btn">🔗<span>Link</span></button>
+          <button id="insertTableBtn" class="file-btn">▦<span>Table</span></button>
+          <button id="pageBreakBtn" class="file-btn">↵<span>Page Break</span></button>
+          <div class="group-label">Insert</div>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="tab-layout">
+        <div class="ribbon-group">
+          <label class="layout-control">Margins
+            <select id="marginPreset">
+              <option value="normal">Normal 2.54 cm</option>
+              <option value="narrow">Narrow 1.27 cm</option>
+              <option value="moderate">Moderate</option>
+              <option value="wide">Wide</option>
+            </select>
+          </label>
+          <label class="layout-control">Orientation
+            <select id="orientation">
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </label>
+          <div class="group-label">Page Setup</div>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="tab-view">
+        <div class="ribbon-group">
+          <button id="toggleRulerBtn">Ruler</button>
+          <button id="toggleGridBtn">Page Shadow</button>
+          <button id="focusModeBtn">Focus</button>
+          <div class="group-label">View</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="findBar" class="findbar hidden">
+      <input id="findInput" type="text" placeholder="Find in document" />
+      <button id="findNextBtn">Next</button>
+      <button id="closeFindBtn">✕</button>
+    </section>
+
+    <div id="ruler" class="ruler">
+      <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span>
+    </div>
+
+    <main id="workspace" class="workspace">
+      <article id="page" class="page" data-orientation="portrait">
+        <div id="editor" class="editor" contenteditable="true" spellcheck="true">
+          <p><br></p>
+        </div>
+      </article>
+    </main>
+
+    <footer class="statusbar">
+      <div>
+        <span id="pageCount">Page 1 of 1</span>
+        <span id="wordCount">Words: 0</span>
+        <span id="charCount">Characters: 0</span>
+      </div>
+      <div class="zoom-wrap">
+        <button id="zoomOutBtn">−</button>
+        <input id="zoomRange" type="range" min="60" max="160" value="100" step="10" />
+        <button id="zoomInBtn">+</button>
+        <span id="zoomValue">100%</span>
+      </div>
+    </footer>
+  </div>
+
+  <input id="fileInput" type="file" accept=".html,.htm,.txt,text/html,text/plain" hidden />
+  <input id="imageInput" type="file" accept="image/*" hidden />
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
