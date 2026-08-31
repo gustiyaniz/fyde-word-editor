@@ -1,5 +1,5 @@
 {
-  "name": "Fyde Word - Offline Document Editor Stage 3",
+  "name": "Fyde Word - Offline DOCX Editor",
   "short_name": "Fyde Word",
   "description": "Editor dokumen offline bergaya Microsoft Word untuk FydeOS dengan DOCX Import dan Export v1.",
   "start_url": "./index.html",
@@ -20,24 +20,54 @@
     {
       "action": "./index.html",
       "accept": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+          ".docx"
+        ],
         "text/html": [
           ".html",
           ".htm"
         ],
         "text/plain": [
           ".txt"
-        ],
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-          ".docx"
         ]
-      }
+      },
+      "launch_type": "single-client"
     }
   ],
   "shortcuts": [
     {
       "name": "New Document",
       "short_name": "New",
-      "url": "./index.html?new=1"
+      "url": "./index.html?new=1",
+      "icons": [
+        {
+          "src": "./icons/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Open Document",
+      "short_name": "Open",
+      "url": "./index.html?open=1",
+      "icons": [
+        {
+          "src": "./icons/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./index.html?share=1",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

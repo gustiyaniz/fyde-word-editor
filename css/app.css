@@ -126,3 +126,11 @@ body.focus-mode .statusbar{flex:0 0 28px}
   .ribbon-panel{height:92px}
   .workspace{padding-top:18px}
 }
+
+/* Stage 4 */
+.drop-overlay{position:fixed;inset:0;z-index:120;background:rgba(24,90,189,.16);display:grid;place-items:center;backdrop-filter:blur(2px)}
+.drop-card{width:min(440px,80vw);padding:34px;background:#fff;border:2px dashed var(--word-blue);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;gap:8px}.drop-icon{font-size:52px}
+.recent-panel{position:fixed;z-index:110;top:78px;left:0;bottom:28px;width:min(520px,92vw);background:#fff;border-right:1px solid #cfcfcf;box-shadow:6px 0 22px rgba(0,0,0,.16);display:flex;flex-direction:column}
+.recent-header{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 16px;border-bottom:1px solid #eee}.recent-header>div{display:flex;flex-direction:column;gap:3px}.recent-header strong{font-size:24px;font-weight:400}.recent-header small{color:#666}.recent-header button{border:0;background:transparent;font-size:18px}
+.recent-list{overflow:auto;flex:1;padding:8px 0}.recent-item{width:100%;display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;background:#fff;padding:11px 22px}.recent-item:hover{background:#f1f6fc}.recent-icon{font-size:24px}.recent-meta{min-width:0;display:flex;flex-direction:column}.recent-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.recent-sub{font-size:11px;color:#777}.recent-remove{border:0;background:transparent;color:#777}.recent-empty{padding:40px 24px;text-align:center;color:#777}.recent-footer{padding:12px 22px;border-top:1px solid #eee}.recent-footer button{border:1px solid #ccc;background:#fff;padding:7px 12px}
+.workspace.drag-active{outline:3px solid var(--word-blue);outline-offset:-3px}

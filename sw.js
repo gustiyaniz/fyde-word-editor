@@ -1,4 +1,4 @@
-const CACHE_NAME = "fyde-word-stage3-ui-v3.1.0";
+const CACHE_NAME = "fyde-word-stage4-v4.0.0";
 const APP_SHELL = [
   "./",
   "./index.html",

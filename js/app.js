@@ -540,17 +540,6 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     $("installBtn").classList.add("hidden");
   });
 
-  async function handleLaunchQueue() {
-    if (!("launchQueue" in window)) return;
-    launchQueue.setConsumer(async launchParams => {
-      const fileHandle = launchParams.files?.[0];
-      if (!fileHandle) return;
-      currentFileHandle = fileHandle;
-      const file = await fileHandle.getFile();
-      await loadFile(file);
-    });
-  }
-
   function restoreAutosave() {
     try {
       const saved = JSON.parse(localStorage.getItem(stateKey) || "null");
@@ -574,6 +563,49 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
   restorePrefs();
   restoreAutosave();
   updateStats();
-  handleLaunchQueue();
   editor.focus();
+
+  // ===== Stage 4: FydeOS integration =====
+  const recentKey = "fydeword-stage4-recent";
+  const recentHandles = new Map();
+  function getRecent(){try{return JSON.parse(localStorage.getItem(recentKey)||"[]")}catch{return[]}}
+  function saveRecent(items){localStorage.setItem(recentKey,JSON.stringify(items.slice(0,12)));renderRecent()}
+  function addRecent(name,kind="document"){let a=getRecent().filter(x=>x.name!==name);a.unshift({name,kind,openedAt:Date.now()});saveRecent(a)}
+  function formatRecentTime(ts){try{return new Intl.DateTimeFormat("id-ID",{dateStyle:"medium",timeStyle:"short"}).format(new Date(ts))}catch{return new Date(ts).toLocaleString()}}
+  function renderRecent(){
+    const list=$("recentList");if(!list)return;const items=getRecent();
+    if(!items.length){list.innerHTML='<div class="recent-empty">Belum ada dokumen terbaru.<br><small>Buka DOCX, HTML, atau TXT untuk menambahkannya.</small></div>';return}
+    list.innerHTML="";
+    items.forEach((item,index)=>{
+      const row=document.createElement("div");row.className="recent-item";
+      const icon=document.createElement("span");icon.className="recent-icon";icon.textContent=/\.docx$/i.test(item.name)?"📝":"📄";
+      const meta=document.createElement("button");meta.className="recent-meta";meta.style.border="0";meta.style.background="transparent";meta.style.textAlign="left";
+      meta.innerHTML=`<span class="recent-name">${escapeHtml(item.name)}</span><span class="recent-sub">${formatRecentTime(item.openedAt)}</span>`;
+      meta.onclick=async()=>{const h=recentHandles.get(item.name);if(h){try{let p=await h.queryPermission?.({mode:"readwrite"});if(p==="granted"||(await h.requestPermission?.({mode:"readwrite"}))==="granted"){currentFileHandle=h;await loadFile(await h.getFile());$("recentPanel").classList.add("hidden");return}}catch{}}$("recentPanel").classList.add("hidden");toast("Pilih file kembali untuk memberi izin akses");openWithPicker()};
+      const rm=document.createElement("button");rm.className="recent-remove";rm.textContent="✕";rm.onclick=()=>{let a=getRecent();a.splice(index,1);saveRecent(a)};
+      row.append(icon,meta,rm);list.appendChild(row)
+    })
+  }
+  $("recentBtn")?.addEventListener("click",()=>{renderRecent();$("recentPanel").classList.remove("hidden")});
+  $("closeRecentBtn")?.addEventListener("click",()=>$("recentPanel").classList.add("hidden"));
+  $("clearRecentBtn")?.addEventListener("click",()=>{localStorage.removeItem(recentKey);recentHandles.clear();renderRecent()});
+
+  let dragDepth=0;
+  window.addEventListener("dragenter",e=>{if(![...(e.dataTransfer?.types||[])].includes("Files"))return;e.preventDefault();dragDepth++;$("dropOverlay")?.classList.remove("hidden");workspace.classList.add("drag-active")});
+  window.addEventListener("dragover",e=>{if([...(e.dataTransfer?.types||[])].includes("Files")){e.preventDefault();e.dataTransfer.dropEffect="copy"}});
+  window.addEventListener("dragleave",e=>{if(![...(e.dataTransfer?.types||[])].includes("Files"))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth){$("dropOverlay")?.classList.add("hidden");workspace.classList.remove("drag-active")}});
+  window.addEventListener("drop",async e=>{e.preventDefault();dragDepth=0;$("dropOverlay")?.classList.add("hidden");workspace.classList.remove("drag-active");const f=e.dataTransfer?.files?.[0];if(!f)return;if(!/\.(docx|html?|txt)$/i.test(f.name)){toast("Format belum didukung");return}currentFileHandle=null;await loadFile(f)});
+
+  const originalLoadFile=loadFile;
+  loadFile=async function(file){await originalLoadFile(file);if(file?.name){addRecent(file.name,/\.docx$/i.test(file.name)?"docx":"text");if(currentFileHandle)recentHandles.set(file.name,currentFileHandle)}};
+
+  if("launchQueue" in window){
+    launchQueue.setConsumer(async params=>{const h=params.files?.[0];if(!h)return;try{currentFileHandle=h;const f=await h.getFile();recentHandles.set(f.name,h);await loadFile(f);toast(`Open with Fyde Word: ${f.name}`)}catch(err){console.error(err);toast("Gagal membuka file dari FydeOS")}})
+  }
+  renderRecent();
+
+  const startupParams=new URLSearchParams(location.search);
+  if(startupParams.get("new")==="1") setTimeout(()=>newDocument(),0);
+  if(startupParams.get("open")==="1") setTimeout(()=>openWithPicker(),0);
+
 })();

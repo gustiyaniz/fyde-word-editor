@@ -116,6 +116,7 @@
         <div class="ribbon-group file-actions">
           <button id="newBtn" class="file-btn">📄<span>New</span></button>
           <button id="openBtn" class="file-btn">📂<span>Open</span></button>
+          <button id="recentBtn" class="file-btn">🕘<span>Recent</span></button>
           <button id="docxInfoBtn" class="file-btn" title="DOCX Import / Export v1">📝<span>DOCX v1</span></button>
           <button id="saveBtn" class="file-btn">💾<span>Save</span></button>
           <button id="saveAsBtn" class="file-btn">🗂️<span>Save As</span></button>
@@ -202,6 +203,8 @@
   <input id="fileInput" type="file" accept=".docx,.html,.htm,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/html,text/plain" hidden />
   <input id="imageInput" type="file" accept="image/*" hidden />
 
+  <div id="dropOverlay" class="drop-overlay hidden"><div class="drop-card"><div class="drop-icon">📄</div><strong>Drop document to open</strong><span>DOCX, HTML, HTM, TXT</span></div></div>
+  <aside id="recentPanel" class="recent-panel hidden" aria-label="Recent documents"><div class="recent-header"><div><strong>Recent</strong><small>Dokumen yang terakhir dibuka atau disimpan</small></div><button id="closeRecentBtn" title="Close">✕</button></div><div id="recentList" class="recent-list"></div><div class="recent-footer"><button id="clearRecentBtn">Clear recent list</button></div></aside>
   <div id="toast" class="toast hidden"></div>
 
   <script src="./js/docx-import.js"></script>
