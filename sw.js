@@ -1,10 +1,11 @@
-const CACHE_NAME = "fyde-word-stage1-v1.0.0";
+const CACHE_NAME = "fyde-word-stage2-v2.0.0";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./css/app.css",
   "./js/app.js",
+  "./js/docx-import.js",
   "./icons/icon.svg"
 ];
 

@@ -68,6 +68,8 @@
             <button data-command="italic" title="Italic (Ctrl+I)"><i>I</i></button>
             <button data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
             <button data-command="strikeThrough" title="Strikethrough"><s>ab</s></button>
+            <button data-command="subscript" title="Subscript">x₂</button>
+            <button data-command="superscript" title="Superscript">x²</button>
             <label class="color-tool" title="Warna teks">A<input id="foreColor" type="color" value="#000000" /></label>
             <label class="color-tool highlight" title="Highlight">🖍<input id="hiliteColor" type="color" value="#fff200" /></label>
           </div>
@@ -86,6 +88,7 @@
             <button data-command="justifyFull" title="Justify">☰</button>
           </div>
           <div class="button-row">
+            <button id="lineSpacingBtn" title="Line spacing">↕</button>
             <button data-command="outdent" title="Kurangi indent">⇤</button>
             <button data-command="indent" title="Tambah indent">⇥</button>
           </div>
@@ -113,6 +116,7 @@
         <div class="ribbon-group file-actions">
           <button id="newBtn" class="file-btn">📄<span>New</span></button>
           <button id="openBtn" class="file-btn">📂<span>Open</span></button>
+          <button id="docxInfoBtn" class="file-btn" title="DOCX Import v1">📝<span>DOCX v1</span></button>
           <button id="saveBtn" class="file-btn">💾<span>Save</span></button>
           <button id="saveAsBtn" class="file-btn">🗂️<span>Save As</span></button>
           <button id="exportHtmlBtn" class="file-btn">🌐<span>Export HTML</span></button>
@@ -194,11 +198,12 @@
     </footer>
   </div>
 
-  <input id="fileInput" type="file" accept=".html,.htm,.txt,text/html,text/plain" hidden />
+  <input id="fileInput" type="file" accept=".docx,.html,.htm,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/html,text/plain" hidden />
   <input id="imageInput" type="file" accept="image/*" hidden />
 
   <div id="toast" class="toast hidden"></div>
 
+  <script src="./js/docx-import.js"></script>
   <script src="./js/app.js"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@
   const fileInput = $("fileInput");
   const imageInput = $("imageInput");
   let currentFileHandle = null;
+  let currentFileType = "html";
   let deferredInstallPrompt = null;
   let dirty = false;
   let autosaveTimer = null;
@@ -98,6 +99,7 @@
   async function newDocument() {
     if (dirty && !confirm("Dokumen belum disimpan. Buat dokumen baru?")) return;
     currentFileHandle = null;
+    currentFileType = "html";
     title.value = "Document1";
     editor.innerHTML = "<p><br></p>";
     setDirty(false);
@@ -115,6 +117,7 @@
           types: [{
             description: "Dokumen Stage 1",
             accept: {
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
               "text/html": [".html", ".htm"],
               "text/plain": [".txt"]
             }
@@ -140,15 +143,36 @@
   });
 
   async function loadFile(file) {
-    const text = await file.text();
     const name = file.name || "Document1";
-    title.value = name.replace(/\.(html?|txt)$/i, "");
+    title.value = name.replace(/\.(docx|html?|txt)$/i, "");
+
+    if (/\.docx$/i.test(name) || file.type === window.FydeDocx?.DOCX_MIME) {
+      if (!window.FydeDocx) throw new Error("DOCX importer tidak tersedia");
+      toast("Mengimpor DOCX…");
+      try {
+        const result = await window.FydeDocx.importDocx(file);
+        editor.innerHTML = result.html || "<p><br></p>";
+        currentFileType = "docx-import";
+        setDirty(false);
+        updateStats();
+        toast(`DOCX berhasil diimpor: ${name}`);
+      } catch (err) {
+        console.error(err);
+        toast("Gagal mengimpor DOCX");
+        alert("DOCX tidak dapat dibuka.\n\n" + (err?.message || err));
+      }
+      return;
+    }
+
+    const text = await file.text();
     if (/\.txt$/i.test(name) || file.type === "text/plain") {
+      currentFileType = "txt";
       editor.innerHTML = "";
       const p = document.createElement("p");
       p.textContent = text;
       editor.appendChild(p);
     } else {
+      currentFileType = "html";
       const parsed = new DOMParser().parseFromString(text, "text/html");
       editor.innerHTML = parsed.body?.innerHTML || text;
     }
@@ -185,6 +209,11 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
 
   async function saveDocument(forceSaveAs = false) {
     const html = documentHtml();
+    if (currentFileType === "docx-import" && !forceSaveAs) {
+      toast("Stage 2: DOCX disimpan sebagai HTML");
+      forceSaveAs = true;
+      currentFileHandle = null;
+    }
     if (!forceSaveAs && currentFileHandle && "createWritable" in currentFileHandle) {
       try {
         await saveToHandle(currentFileHandle, html);
@@ -207,6 +236,7 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
         });
         await saveToHandle(handle, html);
         currentFileHandle = handle;
+        currentFileType = "html";
         setDirty(false);
         toast("Dokumen disimpan");
         return;
@@ -236,6 +266,24 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
   }
 
   $("printBtn").addEventListener("click", () => window.print());
+
+  $("docxInfoBtn")?.addEventListener("click", () => {
+    alert("DOCX Import v1 — Stage 2\n\nDidukung: paragraf, heading, bold/italic/underline/strike, font, ukuran, warna, highlight, alignment, indent/spacing, bullets/numbering umum, hyperlink, tabel dasar, dan gambar raster.\n\nStage 2 belum menulis kembali ke .docx. File DOCX yang telah diedit disimpan sebagai HTML agar file asli tidak rusak. DOCX Export akan dibuat pada Stage 3.");
+  });
+
+  $("lineSpacingBtn")?.addEventListener("click", () => {
+    const value = prompt("Line spacing (contoh 1, 1.15, 1.5, 2):", "1.15");
+    const n = parseFloat(value);
+    if (!n || n < 0.8 || n > 4) return;
+    editor.focus();
+    const sel = window.getSelection();
+    let node = sel?.anchorNode;
+    if (node?.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const block = node?.closest?.("p,h1,h2,h3,h4,h5,h6,li,td");
+    if (block && editor.contains(block)) block.style.lineHeight = String(n);
+    else editor.style.lineHeight = String(n);
+    setDirty();
+  });
 
   $("insertImageBtn").addEventListener("click", () => imageInput.click());
   imageInput.addEventListener("change", () => {

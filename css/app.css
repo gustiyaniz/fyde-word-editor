@@ -102,3 +102,4 @@ body.focus-mode #app{grid-template-rows:1fr 28px}
   .page{box-shadow:none;transform:none!important;margin:0;width:auto;min-height:auto}
   .editor{padding:0}
 }
+\n/* Stage 2: imported DOCX fidelity helpers */\n.editor ol,.editor ul{margin-top:0;margin-bottom:8pt;padding-left:30pt}\n.editor li{margin-bottom:2pt}\n.editor a{color:#0563c1;text-decoration:underline}\n.editor sub{vertical-align:sub;font-size:.8em}.editor sup{vertical-align:super;font-size:.8em}\n

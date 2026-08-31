@@ -1,60 +1,52 @@
-FYDE WORD — STAGE 1
+FYDE WORD — STAGE 2
 ====================
 
-Fitur utama:
-- PWA offline penuh setelah cache pertama.
-- Tampilan Word-like: title bar, ribbon, workspace, halaman A4, status bar.
-- Editor dasar: bold, italic, underline, strike, warna teks, highlight.
-- Paragraph: bullets, numbering, alignment, indent.
-- Heading / normal style.
-- Insert picture, link, tabel sederhana, page break.
-- Layout: margin dan portrait/landscape.
-- Zoom, ruler toggle, page shadow, focus mode.
-- New, Open, Save, Save As, Export HTML, Print.
-- File System Access API jika browser/FydeOS mendukung.
-- Fallback download bila API save picker tidak tersedia.
-- Autosave/recovery via localStorage.
-- Shortcut:
-  Ctrl+N = New
-  Ctrl+O = Open
-  Ctrl+S = Save
-  Ctrl+Shift+S = Save As
-  Ctrl+F = Find
-  Ctrl+B/I/U = format standar browser
+Stage 2 menambahkan DOCX Import v1 di atas fondasi Stage 1.
 
-Format Stage 1:
-- HTML / HTM: buka, edit, simpan.
-- TXT: buka dan edit; penyimpanan default menjadi HTML.
-- DOCX belum aktif pada Stage 1. Fondasi file handling sudah disiapkan untuk Stage berikutnya.
+FITUR BARU STAGE 2
+- Membuka .docx langsung dari Open.
+- File handler manifest untuk .docx.
+- Parser ZIP + OOXML lokal bawaan aplikasi; tidak memakai CDN saat runtime.
+- Import paragraf dan Heading 1-6.
+- Import bold, italic, underline, strikethrough.
+- Import font, ukuran font, warna, highlight, superscript/subscript.
+- Import alignment, indent, paragraph spacing, line spacing.
+- Import bullets/numbering umum.
+- Import hyperlink.
+- Import tabel dasar termasuk colspan sederhana.
+- Import gambar raster yang tertanam di DOCX sebagai data URL.
+- Toolbar Subscript/Superscript.
+- Kontrol line spacing sederhana.
 
-CARA MENJALANKAN
-================
-Service worker tidak akan aktif bila index.html dibuka langsung dengan file://.
-Jalankan melalui HTTPS atau localhost.
+KEAMANAN FILE DOCX
+Stage 2 adalah IMPORT DOCX, bukan DOCX round-trip penuh. Jika dokumen .docx dibuka lalu diedit, Ctrl+S akan diarahkan ke Save As HTML. Aplikasi TIDAK menimpa .docx asli dengan HTML. Ini disengaja agar file DOCX asli tidak rusak.
 
-Pilihan 1 - GitHub Pages / Vercel:
-1. Upload seluruh isi folder ini.
-2. Buka URL HTTPS hasil deploy.
-3. Tunggu halaman selesai dimuat.
-4. Install PWA dari browser/FydeOS.
-5. Matikan internet dan coba buka kembali.
+FORMAT
+DOCX: Open/Edit = ya, Save kembali DOCX = belum (Stage 3)
+HTML: Open/Edit/Save = ya
+TXT: Open/Edit = ya, Save default HTML
 
-Pilihan 2 - lokal untuk pengujian:
-Python:
-  python3 -m http.server 8080
+BATAS DOCX IMPORT V1
+Belum ditargetkan: tracked changes, comments, footnote/endnote kompleks, floating text box, SmartArt, chart, equation, macro, section break kompleks, header/footer, embedded object, floating shape, field tingkat lanjut, dan fidelity pixel-perfect Word.
 
-Kemudian buka:
-  http://localhost:8080
+CARA UJI
+1. Deploy seluruh folder melalui HTTPS (GitHub Pages/Vercel/server lain) atau localhost.
+2. Jangan jalankan via file:// karena Service Worker tidak aktif.
+3. Install sebagai PWA pada FydeOS/Chromium.
+4. Buka file DOCX sederhana lalu cek teks, list, tabel, dan gambar.
+5. Setelah cache selesai, matikan internet dan uji kembali.
 
-INSTALL DI FYDEOS
-=================
-1. Buka aplikasi menggunakan Chromium/Chrome di FydeOS.
-2. Klik tombol Install jika muncul, atau gunakan menu browser > Install app.
-3. Jalankan Fyde Word dari launcher.
-4. Setelah asset pernah tercache, aplikasi dapat dijalankan tanpa internet.
+LOCAL TEST
+python3 -m http.server 8080
+Buka http://localhost:8080
 
-CATATAN
-=======
-- File Handling API tergantung dukungan Chromium/FydeOS dan instalasi PWA.
-- Pada Stage 1 file_handlers hanya untuk .html/.htm/.txt.
-- DOCX akan ditambahkan di Stage selanjutnya dengan parser/import-export khusus.
+SHORTCUT
+Ctrl+N New
+Ctrl+O Open
+Ctrl+S Save
+Ctrl+Shift+S Save As
+Ctrl+F Find
+Ctrl+B/I/U format standar browser
+
+STAGE 3 YANG DISARANKAN
+DOCX Export v1 / round-trip dasar: membuat paket OOXML baru dari document model editor, termasuk paragraph/run formatting, list, table, image, page setup, dan metadata.
