@@ -8,7 +8,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./css/app.css" />
-  <title>Fyde Word</title>
+  <title>Fyde Word Stage 5</title>
 </head>
 <body>
   <div id="app">
@@ -133,6 +133,9 @@
           <button id="insertLinkBtn" class="file-btn">🔗<span>Link</span></button>
           <button id="insertTableBtn" class="file-btn">▦<span>Table</span></button>
           <button id="pageBreakBtn" class="file-btn">↵<span>Page Break</span></button>
+          <button id="headerBtn" class="file-btn">⌃<span>Header</span></button>
+          <button id="footerBtn" class="file-btn">⌄<span>Footer</span></button>
+          <button id="pageNumberBtn" class="file-btn">#<span>Page Number</span></button>
           <div class="group-label">Insert</div>
         </div>
       </div>
@@ -161,6 +164,8 @@
         <div class="ribbon-group">
           <button id="toggleRulerBtn">Ruler</button>
           <button id="toggleGridBtn">Page Shadow</button>
+          <button id="printLayoutBtn" class="view-active">Print Layout</button>
+          <button id="webLayoutBtn">Web Layout</button>
           <button id="focusModeBtn">Focus</button>
           <div class="group-label">View</div>
         </div>
@@ -178,11 +183,18 @@
     </div>
 
     <main id="workspace" class="workspace">
-      <article id="page" class="page" data-orientation="portrait">
-        <div id="editor" class="editor" contenteditable="true" spellcheck="true">
-          <p><br></p>
-        </div>
-      </article>
+      <div id="documentCanvas" class="document-canvas" data-orientation="portrait">
+        <article id="page" class="page document-page" data-orientation="portrait" data-page="1">
+          <div class="page-header" data-role="header"></div>
+          <div id="editor" class="editor page-body" contenteditable="true" spellcheck="true">
+            <p><br></p>
+          </div>
+          <div class="page-footer" data-role="footer">
+            <span class="footer-text"></span>
+            <span class="page-number"></span>
+          </div>
+        </article>
+      </div>
     </main>
 
     <footer class="statusbar">

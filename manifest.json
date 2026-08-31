@@ -1,7 +1,7 @@
 {
-  "name": "Fyde Word - Offline DOCX Editor",
+  "name": "Fyde Word - Offline DOCX Editor Stage 5",
   "short_name": "Fyde Word",
-  "description": "Editor dokumen offline bergaya Microsoft Word untuk FydeOS dengan DOCX Import dan Export v1.",
+  "description": "Editor DOCX offline untuk FydeOS dengan pagination A4, header/footer, page number dan file handling.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

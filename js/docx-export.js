@@ -294,11 +294,28 @@
     return out || "<w:p/>";
   }
 
+  function headerXml(text="") {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p></w:hdr>`;
+  }
+  function pageFieldRun() {
+    return `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
+  }
+  function footerXml(text="", pageNumberMode="none") {
+    const p = [];
+    if (text) p.push(`<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`);
+    if (pageNumberMode !== "none") {
+      const jc = pageNumberMode === "center" ? "center" : pageNumberMode === "right" ? "right" : "left";
+      p.push(`<w:p><w:pPr><w:jc w:val="${jc}"/></w:pPr>${pageFieldRun()}</w:p>`);
+    }
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${p.join("") || "<w:p/>"}</w:ftr>`;
+  }
+
   function pageSect(options={}) {
     const landscape = options.orientation === "landscape";
     const w = landscape ? 16838 : 11906, h = landscape ? 11906 : 16838;
     const margin = options.marginTwips || {top:1440,right:1440,bottom:1440,left:1440};
-    return `<w:sectPr><w:pgSz w:w="${w}" w:h="${h}"${landscape?' w:orient="landscape"':''}/><w:pgMar w:top="${margin.top}" w:right="${margin.right}" w:bottom="${margin.bottom}" w:left="${margin.left}" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
+    const refs = `${options.headerText ? '<w:headerReference w:type="default" r:id="rId3"/>' : ''}${(options.footerText || (options.pageNumberMode && options.pageNumberMode !== "none")) ? '<w:footerReference w:type="default" r:id="rId4"/>' : ''}`;
+    return `<w:sectPr>${refs}<w:pgSz w:w="${w}" w:h="${h}"${landscape?' w:orient="landscape"':''}/><w:pgMar w:top="${margin.top}" w:right="${margin.right}" w:bottom="${margin.bottom}" w:left="${margin.left}" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
   }
 
   function stylesXml() {
@@ -317,17 +334,20 @@
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="multilevel"/>${bulletLvls}</w:abstractNum><w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="multilevel"/>${decLvls}</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num></w:numbering>`;
   }
 
-  function contentTypes(ctx) {
+  function contentTypes(ctx, options={}) {
     const defaults = new Map([["rels","application/vnd.openxmlformats-package.relationships+xml"],["xml","application/xml"]]);
     for (const m of ctx.media) defaults.set(m.name.split(".").pop().toLowerCase(), m.mime);
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${Array.from(defaults).map(([e,t])=>`<Default Extension="${esc(e)}" ContentType="${esc(t)}"/>`).join("")}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`;
+    const hf = `${options.headerText ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' : ''}${(options.footerText || (options.pageNumberMode && options.pageNumberMode !== "none")) ? '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' : ''}`;
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">${Array.from(defaults).map(([e,t])=>`<Default Extension="${esc(e)}" ContentType="${esc(t)}"/>`).join("")}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>${hf}<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`;
   }
 
-  function documentRels(ctx) {
+  function documentRels(ctx, options={}) {
     const base = [
       {id:"rId1",type:"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",target:"styles.xml"},
       {id:"rId2",type:"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",target:"numbering.xml"}
     ];
+    if (options.headerText) base.push({id:"rId3",type:"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",target:"header1.xml"});
+    if (options.footerText || (options.pageNumberMode && options.pageNumberMode !== "none")) base.push({id:"rId4",type:"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",target:"footer1.xml"});
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${[...base,...ctx.rels].map(r=>`<Relationship Id="${r.id}" Type="${r.type}" Target="${esc(r.target)}"${r.mode?` TargetMode="${r.mode}"`:""}/>`).join("")}</Relationships>`;
   }
 
@@ -342,14 +362,16 @@
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}${pageSect(options)}</w:body></w:document>`;
 
     const zip = new ZipWriter();
-    zip.add("[Content_Types].xml", contentTypes(ctx));
+    zip.add("[Content_Types].xml", contentTypes(ctx, options));
     zip.add("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`);
     zip.add("word/document.xml", documentXml);
     zip.add("word/styles.xml", stylesXml());
     zip.add("word/numbering.xml", numberingXml());
-    zip.add("word/_rels/document.xml.rels", documentRels(ctx));
+    zip.add("word/_rels/document.xml.rels", documentRels(ctx, options));
+    if (options.headerText) zip.add("word/header1.xml", headerXml(options.headerText));
+    if (options.footerText || (options.pageNumberMode && options.pageNumberMode !== "none")) zip.add("word/footer1.xml", footerXml(options.footerText, options.pageNumberMode || "none"));
     zip.add("docProps/core.xml", coreXml(options.title || "Document"));
-    zip.add("docProps/app.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Fyde Word</Application><AppVersion>3.0</AppVersion></Properties>`);
+    zip.add("docProps/app.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Fyde Word</Application><AppVersion>5.0</AppVersion></Properties>`);
     for (const m of ctx.media) zip.add(`word/media/${m.name}`, m.bytes);
     return new Blob([zip.build()], {type:DOCX_MIME});
   }

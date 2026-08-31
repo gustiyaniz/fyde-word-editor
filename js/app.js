@@ -5,6 +5,7 @@
   const editor = $("editor");
   const page = $("page");
   const workspace = $("workspace");
+  const documentCanvas = $("documentCanvas");
   const title = $("documentTitle");
   const fileInput = $("fileInput");
   const imageInput = $("imageInput");
@@ -14,8 +15,211 @@
   let dirty = false;
   let autosaveTimer = null;
 
-  const stateKey = "fydeword-stage3-autosave";
-  const prefsKey = "fydeword-stage3-prefs";
+  const stateKey = "fydeword-stage5-autosave";
+  const prefsKey = "fydeword-stage5-prefs";
+  let headerText = "";
+  let footerText = "";
+  let pageNumberMode = "center";
+  let activeEditor = editor;
+  let paginationLock = false;
+
+
+  function pageBodies() {
+    return Array.from(documentCanvas.querySelectorAll(".page-body"));
+  }
+  function pages() {
+    return Array.from(documentCanvas.querySelectorAll(".document-page"));
+  }
+  function collectDocumentHTML() {
+    const ps = pages();
+    return ps.map((p, i) => {
+      const body = p.querySelector(".page-body");
+      const forced = p.dataset.forcedBreak === "1" && i < ps.length - 1 ? '<hr class="page-break">' : "";
+      return body.innerHTML + forced;
+    }).join("");
+  }
+  function collectDocumentText() {
+    return pageBodies().map(b => b.innerText || "").join("\n");
+  }
+  function exportContainer() {
+    const temp = document.createElement("div");
+    const ps = pages();
+    ps.forEach((p, i) => {
+      const body = p.querySelector(".page-body");
+      for (const node of Array.from(body.childNodes)) temp.appendChild(node.cloneNode(true));
+      if (p.dataset.forcedBreak === "1" && i < ps.length - 1) {
+        const hr = document.createElement("hr");
+        hr.className = "page-break";
+        temp.appendChild(hr);
+      }
+    });
+    return temp;
+  }
+  function updatePageChrome(article, index) {
+    const header = article.querySelector(".page-header");
+    const footer = article.querySelector(".footer-text");
+    const number = article.querySelector(".page-number");
+    header.textContent = headerText;
+    footer.textContent = footerText;
+    if (pageNumberMode === "none") {
+      number.textContent = "";
+      number.removeAttribute("data-align");
+    } else {
+      number.textContent = String(index);
+      number.dataset.align = pageNumberMode;
+    }
+    article.dataset.page = String(index);
+  }
+  function updateAllPageChrome() {
+    pages().forEach((p, i) => updatePageChrome(p, i + 1));
+  }
+  function makePage(index) {
+    const article = document.createElement("article");
+    article.className = "page document-page";
+    article.dataset.orientation = documentCanvas.dataset.orientation || "portrait";
+    article.dataset.page = String(index);
+    article.innerHTML = `<div class="page-header" data-role="header"></div>
+      <div class="editor page-body" contenteditable="true" spellcheck="true"></div>
+      <div class="page-footer" data-role="footer"><span class="footer-text"></span><span class="page-number"></span></div>`;
+    documentCanvas.appendChild(article);
+    updatePageChrome(article, index);
+    return article;
+  }
+  function setDocumentHTML(html) {
+    paginationLock = true;
+    pages().slice(1).forEach(p => p.remove());
+    delete pages()[0].dataset.forcedBreak;
+    editor.innerHTML = html || "<p><br></p>";
+    activeEditor = editor;
+    paginationLock = false;
+    requestAnimationFrame(() => paginateDocument(true));
+  }
+  function bodyOverflowing(body) {
+    return body.scrollHeight > body.clientHeight + 2;
+  }
+  function splitSimpleParagraph(block, body, nextBody) {
+    if (!block || !/^(P|H[1-6])$/.test(block.tagName) || block.children.length) return false;
+    const text = block.textContent || "";
+    const words = text.split(/(\s+)/);
+    if (words.length < 6) return false;
+    let lo = 1, hi = words.length - 1, fit = 0;
+    const original = text;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      block.textContent = words.slice(0, mid).join("");
+      if (!bodyOverflowing(body)) { fit = mid; lo = mid + 1; }
+      else hi = mid - 1;
+    }
+    if (!fit || fit >= words.length) { block.textContent = original; return false; }
+    const rest = words.slice(fit).join("").replace(/^\s+/, "");
+    block.textContent = words.slice(0, fit).join("").replace(/\s+$/, "");
+    const clone = block.cloneNode(false);
+    clone.textContent = rest;
+    nextBody.prepend(clone);
+    return true;
+  }
+  function ensureNextPage(pageIndex) {
+    const ps = pages();
+    return ps[pageIndex + 1] || makePage(ps.length + 1);
+  }
+  function normalizeEmptyBody(body) {
+    if (!body.children.length && !(body.textContent || "").trim()) body.innerHTML = "<p><br></p>";
+  }
+  function paginateDocument(force = false) {
+    if (paginationLock || document.body.classList.contains("web-layout")) return;
+    paginationLock = true;
+    try {
+      pageBodies().slice(1).forEach(b => {
+        if (b.children.length === 1 && b.firstElementChild?.tagName === "P" && !(b.innerText || "").trim()) b.innerHTML = "";
+      });
+
+      let changed = true, guard = 0;
+      while (changed && guard++ < 50) {
+        changed = false;
+        for (let i = 0; i < pageBodies().length; i++) {
+          const body = pageBodies()[i];
+          const br = body.querySelector(":scope > hr.page-break");
+          if (!br) continue;
+          const next = ensureNextPage(i).querySelector(".page-body");
+          let n = br.nextSibling;
+          const moving = [];
+          while (n) { moving.push(n); n = n.nextSibling; }
+          moving.forEach(node => next.appendChild(node));
+          br.remove();
+          pages()[i].dataset.forcedBreak = "1";
+          changed = true;
+        }
+      }
+
+      for (let i = 0; i < pageBodies().length; i++) {
+        const body = pageBodies()[i];
+        let guard2 = 0;
+        pages()[i].classList.remove("page-overflow-warning");
+        while (bodyOverflowing(body) && guard2++ < 200) {
+          const next = ensureNextPage(i).querySelector(".page-body");
+          const last = body.lastElementChild;
+          if (!last) break;
+          if (body.children.length === 1) {
+            if (!splitSimpleParagraph(last, body, next)) {
+              pages()[i].classList.add("page-overflow-warning");
+              break;
+            }
+          } else {
+            next.prepend(last);
+          }
+        }
+      }
+
+      for (let i = 0; i < pages().length - 1; i++) {
+        const currentPage = pages()[i];
+        if (currentPage.dataset.forcedBreak === "1") continue;
+        const current = currentPage.querySelector(".page-body");
+        const next = pages()[i + 1].querySelector(".page-body");
+        let guard3 = 0;
+        while (next.firstElementChild && guard3++ < 100) {
+          const candidate = next.firstElementChild;
+          current.appendChild(candidate);
+          if (bodyOverflowing(current)) {
+            next.prepend(candidate);
+            break;
+          }
+        }
+      }
+
+      let ps = pages();
+      while (ps.length > 1) {
+        const last = ps[ps.length - 1];
+        const b = last.querySelector(".page-body");
+        if ((b.innerText || "").trim() || b.querySelector("img,table,hr")) break;
+        last.remove();
+        ps = pages();
+      }
+      pageBodies().forEach(normalizeEmptyBody);
+      updateAllPageChrome();
+      updateStats();
+    } finally {
+      paginationLock = false;
+    }
+  }
+  function currentPageNumber() {
+    const ps = pages();
+    const focused = document.activeElement?.closest?.(".document-page");
+    if (focused) return Math.max(1, ps.indexOf(focused) + 1);
+    const wr = workspace.getBoundingClientRect();
+    const center = wr.top + wr.height / 2;
+    let best = 0, dist = Infinity;
+    ps.forEach((p, i) => {
+      const r = p.getBoundingClientRect();
+      const d = Math.abs((r.top + r.bottom) / 2 - center);
+      if (d < dist) { dist = d; best = i; }
+    });
+    return best + 1;
+  }
+  function highlightActivePage() {
+    const n = currentPageNumber();
+    pages().forEach((p, i) => p.classList.toggle("active-page", i === n - 1));
+    return n;
+  }
 
   function toast(message) {
     const el = $("toast");
@@ -36,7 +240,7 @@
     autosaveTimer = setTimeout(() => {
       localStorage.setItem(stateKey, JSON.stringify({
         title: title.value || "Document1",
-        html: editor.innerHTML,
+        html: collectDocumentHTML(),
         savedAt: Date.now()
       }));
       $("saveState").textContent = "Autosaved";
@@ -44,19 +248,18 @@
   }
 
   function updateStats() {
-    const text = editor.innerText.replace(/\u00A0/g, " ").trim();
+    const text = collectDocumentText().replace(/\u00A0/g, " ").trim();
     const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
     $("wordCount").textContent = `Words: ${words}`;
     $("charCount").textContent = `Characters: ${text.length}`;
-
-    const paperHeightPx = page.dataset.orientation === "landscape" ? 794 : 1123;
-    const contentHeight = Math.max(editor.scrollHeight, paperHeightPx);
-    const pages = Math.max(1, Math.ceil(contentHeight / paperHeightPx));
-    $("pageCount").textContent = `Page 1 of ${pages}`;
+    const total = Math.max(1, pages().length);
+    const current = Math.min(total, highlightActivePage());
+    $("pageCount").textContent = `Page ${current} of ${total}`;
   }
 
   function exec(cmd, value = null) {
-    editor.focus();
+    const target = activeEditor && documentCanvas.contains(activeEditor) ? activeEditor : editor;
+    if (!target.contains(window.getSelection()?.anchorNode)) target.focus();
     document.execCommand(cmd, false, value);
     setDirty();
     updateStats();
@@ -101,7 +304,7 @@
     currentFileHandle = null;
     currentFileType = "docx";
     title.value = "Document1";
-    editor.innerHTML = "<p><br></p>";
+    setDocumentHTML("<p><br></p>");
     setDirty(false);
     updateStats();
     editor.focus();
@@ -151,7 +354,7 @@
       toast("Mengimpor DOCX…");
       try {
         const result = await window.FydeDocx.importDocx(file);
-        editor.innerHTML = result.html || "<p><br></p>";
+        setDocumentHTML(result.html || "<p><br></p>");
         currentFileType = "docx";
         setDirty(false);
         updateStats();
@@ -167,14 +370,13 @@
     const text = await file.text();
     if (/\.txt$/i.test(name) || file.type === "text/plain") {
       currentFileType = "txt";
-      editor.innerHTML = "";
       const p = document.createElement("p");
       p.textContent = text;
-      editor.appendChild(p);
+      setDocumentHTML(p.outerHTML);
     } else {
       currentFileType = "html";
       const parsed = new DOMParser().parseFromString(text, "text/html");
-      editor.innerHTML = parsed.body?.innerHTML || text;
+      setDocumentHTML(parsed.body?.innerHTML || text);
     }
     setDirty(false);
     updateStats();
@@ -193,7 +395,7 @@ table{border-collapse:collapse}td,th{border:1px solid #555;padding:6px}
 img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
 </style>
 </head>
-<body>${editor.innerHTML}</body>
+<body>${collectDocumentHTML()}</body>
 </html>`;
   }
 
@@ -218,14 +420,17 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     const tw = x => Math.round(x / 25.4 * 1440);
     return {
       title: title.value || "Document1",
-      orientation: page.dataset.orientation || "portrait",
+      orientation: documentCanvas.dataset.orientation || "portrait",
+      headerText,
+      footerText,
+      pageNumberMode,
       marginTwips:{top:tw(mm.top),right:tw(mm.right),bottom:tw(mm.bottom),left:tw(mm.left)}
     };
   }
 
   async function buildDocx() {
     if (!window.FydeDocxExport) throw new Error("DOCX exporter tidak tersedia");
-    return await window.FydeDocxExport.exportDocx(editor, pageOptions());
+    return await window.FydeDocxExport.exportDocx(exportContainer(), pageOptions());
   }
 
   async function saveDocx(forceSaveAs = false) {
@@ -340,13 +545,13 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     const value = prompt("Line spacing (contoh 1, 1.15, 1.5, 2):", "1.15");
     const n = parseFloat(value);
     if (!n || n < 0.8 || n > 4) return;
-    editor.focus();
+    activeEditor.focus();
     const sel = window.getSelection();
     let node = sel?.anchorNode;
     if (node?.nodeType === Node.TEXT_NODE) node = node.parentElement;
     const block = node?.closest?.("p,h1,h2,h3,h4,h5,h6,li,td");
-    if (block && editor.contains(block)) block.style.lineHeight = String(n);
-    else editor.style.lineHeight = String(n);
+    if (block && documentCanvas.contains(block)) block.style.lineHeight = String(n);
+    else activeEditor.style.lineHeight = String(n);
     setDirty();
   });
 
@@ -381,6 +586,30 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
 
   $("pageBreakBtn").addEventListener("click", () => {
     exec("insertHTML", '<hr class="page-break"><p><br></p>');
+    requestAnimationFrame(() => paginateDocument(true));
+  });
+
+  $("headerBtn")?.addEventListener("click", () => {
+    const v = prompt("Header dokumen (kosongkan untuk menghapus):", headerText);
+    if (v === null) return;
+    headerText = v.trim();
+    updateAllPageChrome(); savePrefs(); setDirty();
+  });
+
+  $("footerBtn")?.addEventListener("click", () => {
+    const v = prompt("Footer dokumen (kosongkan untuk menghapus):", footerText);
+    if (v === null) return;
+    footerText = v.trim();
+    updateAllPageChrome(); savePrefs(); setDirty();
+  });
+
+  $("pageNumberBtn")?.addEventListener("click", () => {
+    const v = prompt("Posisi nomor halaman: none, left, center, right", pageNumberMode);
+    if (v === null) return;
+    const mode = v.trim().toLowerCase();
+    if (!["none","left","center","right"].includes(mode)) { toast("Gunakan none, left, center, atau right"); return; }
+    pageNumberMode = mode;
+    updateAllPageChrome(); savePrefs(); setDirty();
   });
 
   const marginMap = {
@@ -389,14 +618,31 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     moderate: "19.05mm 25.4mm",
     wide: "25.4mm 50.8mm"
   };
+  function applyMarginPreset(preset) {
+    const map = {
+      normal:["25.4mm","25.4mm","25.4mm","25.4mm"],
+      narrow:["12.7mm","12.7mm","12.7mm","12.7mm"],
+      moderate:["19.05mm","25.4mm","19.05mm","25.4mm"],
+      wide:["25.4mm","50.8mm","25.4mm","50.8mm"]
+    };
+    const m = map[preset] || map.normal;
+    documentCanvas.style.setProperty("--margin-top",m[0]);
+    documentCanvas.style.setProperty("--margin-right",m[1]);
+    documentCanvas.style.setProperty("--margin-bottom",m[2]);
+    documentCanvas.style.setProperty("--margin-left",m[3]);
+  }
+
   $("marginPreset").addEventListener("change", e => {
-    editor.style.padding = marginMap[e.target.value] || marginMap.normal;
+    applyMarginPreset(e.target.value);
+    requestAnimationFrame(() => paginateDocument(true));
     savePrefs();
     setDirty();
   });
 
   $("orientation").addEventListener("change", e => {
-    page.dataset.orientation = e.target.value;
+    documentCanvas.dataset.orientation = e.target.value;
+    pages().forEach(p => p.dataset.orientation = e.target.value);
+    requestAnimationFrame(() => paginateDocument(true));
     savePrefs();
     updateStats();
   });
@@ -411,6 +657,25 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     savePrefs();
   });
 
+  $("printLayoutBtn")?.addEventListener("click", () => {
+    document.body.classList.remove("web-layout");
+    $("printLayoutBtn").classList.add("view-active");
+    $("webLayoutBtn")?.classList.remove("view-active");
+    requestAnimationFrame(() => paginateDocument(true));
+  });
+  $("webLayoutBtn")?.addEventListener("click", () => {
+    const merged = collectDocumentHTML();
+    paginationLock = true;
+    pages().slice(1).forEach(p => p.remove());
+    delete pages()[0].dataset.forcedBreak;
+    editor.innerHTML = merged;
+    activeEditor = editor;
+    paginationLock = false;
+    document.body.classList.add("web-layout");
+    $("webLayoutBtn").classList.add("view-active");
+    $("printLayoutBtn")?.classList.remove("view-active");
+    updateStats();
+  });
   $("focusModeBtn").addEventListener("click", () => {
     document.body.classList.toggle("focus-mode");
   });
@@ -424,19 +689,13 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     value = Math.min(160, Math.max(60, value));
     $("zoomRange").value = value;
     $("zoomValue").textContent = `${value}%`;
-
-    // Chromium/FydeOS: CSS zoom participates in layout, so the page keeps
-    // its real scrollable size and never visually overlaps the status bar.
-    if ("zoom" in page.style) {
-      page.style.zoom = `${value}%`;
-      page.style.transform = "none";
-      page.style.marginBottom = "0";
+    if ("zoom" in documentCanvas.style) {
+      documentCanvas.style.zoom = `${value}%`;
+      documentCanvas.style.transform = "none";
     } else {
-      // Fallback for engines without CSS zoom.
-      page.style.zoom = "";
-      page.style.transform = `scale(${value / 100})`;
-      page.style.transformOrigin = "top center";
-      page.style.marginBottom = `${Math.max(0, (value - 100) * 8)}px`;
+      documentCanvas.style.zoom = "";
+      documentCanvas.style.transform = `scale(${value / 100})`;
+      documentCanvas.style.transformOrigin = "top center";
     }
     savePrefs();
   }
@@ -448,10 +707,13 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
   function savePrefs() {
     localStorage.setItem(prefsKey, JSON.stringify({
       zoom: +$("zoomRange").value,
-      orientation: page.dataset.orientation,
+      orientation: documentCanvas.dataset.orientation,
       margin: $("marginPreset").value,
       rulerHidden: $("ruler").classList.contains("hidden"),
-      noShadow: workspace.classList.contains("no-shadow")
+      noShadow: workspace.classList.contains("no-shadow"),
+      headerText,
+      footerText,
+      pageNumberMode
     }));
   }
 
@@ -460,13 +722,18 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
       const p = JSON.parse(localStorage.getItem(prefsKey) || "{}");
       if (p.zoom) setZoom(p.zoom);
       if (p.orientation) {
-        page.dataset.orientation = p.orientation;
+        documentCanvas.dataset.orientation = p.orientation;
+        pages().forEach(pg => pg.dataset.orientation = p.orientation);
         $("orientation").value = p.orientation;
       }
       if (p.margin && marginMap[p.margin]) {
         $("marginPreset").value = p.margin;
-        editor.style.padding = marginMap[p.margin];
+        applyMarginPreset(p.margin);
       }
+      headerText = p.headerText || "";
+      footerText = p.footerText || "";
+      pageNumberMode = p.pageNumberMode || "center";
+      updateAllPageChrome();
       if (p.rulerHidden) $("ruler").classList.add("hidden");
       if (p.noShadow) workspace.classList.add("no-shadow");
     } catch {}
@@ -493,9 +760,26 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     if (!found) toast("Teks tidak ditemukan lagi");
   }
 
-  editor.addEventListener("input", () => {
+  documentCanvas.addEventListener("focusin", e => {
+    const body = e.target.closest?.(".page-body");
+    if (body) { activeEditor = body; updateStats(); }
+  });
+  documentCanvas.addEventListener("click", e => {
+    const body = e.target.closest?.(".page-body");
+    if (body) { activeEditor = body; updateStats(); }
+    if (e.target.closest?.(".page-header") && e.detail === 2) $("headerBtn")?.click();
+    if (e.target.closest?.(".page-footer") && e.detail === 2) $("footerBtn")?.click();
+  });
+  documentCanvas.addEventListener("input", e => {
+    if (!e.target.closest?.(".page-body")) return;
     setDirty();
     updateStats();
+    clearTimeout(documentCanvas._paginateTimer);
+    documentCanvas._paginateTimer = setTimeout(() => paginateDocument(), 80);
+  });
+  workspace.addEventListener("scroll", () => {
+    clearTimeout(workspace._pageTimer);
+    workspace._pageTimer = setTimeout(updateStats, 60);
   });
 
   title.addEventListener("input", () => setDirty());
@@ -547,7 +831,7 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
       const ageHours = (Date.now() - saved.savedAt) / 3600000;
       if (ageHours < 168 && confirm(`Pulihkan autosave "${saved.title}"?`)) {
         title.value = saved.title || "Document1";
-        editor.innerHTML = saved.html;
+        setDocumentHTML(saved.html);
         dirty = true;
         $("saveState").textContent = "Dipulihkan dari autosave";
       }
@@ -562,11 +846,13 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
 
   restorePrefs();
   restoreAutosave();
+  updateAllPageChrome();
+  requestAnimationFrame(() => paginateDocument(true));
   updateStats();
   editor.focus();
 
   // ===== Stage 4: FydeOS integration =====
-  const recentKey = "fydeword-stage4-recent";
+  const recentKey = "fydeword-stage5-recent";
   const recentHandles = new Map();
   function getRecent(){try{return JSON.parse(localStorage.getItem(recentKey)||"[]")}catch{return[]}}
   function saveRecent(items){localStorage.setItem(recentKey,JSON.stringify(items.slice(0,12)));renderRecent()}

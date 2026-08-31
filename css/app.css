@@ -134,3 +134,86 @@ body.focus-mode .statusbar{flex:0 0 28px}
 .recent-header{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 16px;border-bottom:1px solid #eee}.recent-header>div{display:flex;flex-direction:column;gap:3px}.recent-header strong{font-size:24px;font-weight:400}.recent-header small{color:#666}.recent-header button{border:0;background:transparent;font-size:18px}
 .recent-list{overflow:auto;flex:1;padding:8px 0}.recent-item{width:100%;display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;background:#fff;padding:11px 22px}.recent-item:hover{background:#f1f6fc}.recent-icon{font-size:24px}.recent-meta{min-width:0;display:flex;flex-direction:column}.recent-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.recent-sub{font-size:11px;color:#777}.recent-remove{border:0;background:transparent;color:#777}.recent-empty{padding:40px 24px;text-align:center;color:#777}.recent-footer{padding:12px 22px;border-top:1px solid #eee}.recent-footer button{border:1px solid #ccc;background:#fff;padding:7px 12px}
 .workspace.drag-active{outline:3px solid var(--word-blue);outline-offset:-3px}
+
+
+/* ===== Stage 5: Print Layout / real page stack ===== */
+.document-canvas{
+  --margin-top:25.4mm;
+  --margin-right:25.4mm;
+  --margin-bottom:25.4mm;
+  --margin-left:25.4mm;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+  width:max-content;
+  min-width:100%;
+  transform-origin:top center;
+}
+.document-canvas .page{
+  position:relative;
+  width:210mm;
+  height:297mm;
+  min-height:297mm;
+  flex:0 0 auto;
+  overflow:hidden;
+  margin:0 auto;
+  background:#fff;
+}
+.document-canvas[data-orientation="landscape"] .page{
+  width:297mm;
+  height:210mm;
+  min-height:210mm;
+}
+.page-body{
+  position:absolute;
+  top:var(--margin-top);
+  right:var(--margin-right);
+  bottom:var(--margin-bottom);
+  left:var(--margin-left);
+  min-height:0!important;
+  padding:0!important;
+  overflow:hidden;
+  outline:none;
+  line-height:1.15;
+}
+.page-header,.page-footer{
+  position:absolute;
+  left:var(--margin-left);
+  right:var(--margin-right);
+  color:#666;
+  font-family:Calibri,Arial,sans-serif;
+  font-size:9.5pt;
+  min-height:8mm;
+  user-select:none;
+}
+.page-header{top:10mm;border-bottom:1px solid transparent}
+.page-footer{
+  bottom:8mm;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:end;
+  gap:8px;
+  border-top:1px solid transparent;
+}
+.page:hover .page-header,.page:hover .page-footer{border-color:#efefef}
+.page-number{min-width:20px;text-align:center}
+.page-number[data-align="left"]{position:absolute;left:0}
+.page-number[data-align="center"]{position:absolute;left:50%;transform:translateX(-50%)}
+.page-number[data-align="right"]{position:absolute;right:0}
+.document-page.active-page{box-shadow:0 2px 12px rgba(0,0,0,.27),0 0 0 1px rgba(24,90,189,.22)}
+.workspace.no-shadow .document-page{box-shadow:none}
+.workspace.no-shadow .document-page.active-page{box-shadow:0 0 0 1px rgba(24,90,189,.22)}
+.view-active{background:#e4effc!important;border-color:#aac8ec!important}
+.page-overflow-warning{box-shadow:inset 0 -4px 0 #d83b01!important}
+body.web-layout .document-canvas{display:block;width:min(1100px,calc(100% - 32px));min-width:0}
+body.web-layout .document-page{width:100%!important;height:auto!important;min-height:calc(100vh - 280px)!important;overflow:visible;margin:0}
+body.web-layout .document-page:not(:first-child){display:none}
+body.web-layout .page-body{position:relative;inset:auto!important;min-height:calc(100vh - 340px)!important;padding:24px 42px!important;overflow:visible}
+body.web-layout .page-header,body.web-layout .page-footer{display:none}
+@media print{
+  .document-canvas{display:block!important;width:auto!important;zoom:100%!important;transform:none!important}
+  .document-page{page-break-after:always;box-shadow:none!important;margin:0!important}
+  .document-page:last-child{page-break-after:auto}
+  .page-header,.page-footer{color:#333}
+}
