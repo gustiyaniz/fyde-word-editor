@@ -15,7 +15,20 @@ button,select,input{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
 
-#app{height:100vh;display:grid;grid-template-rows:42px 36px 108px auto 28px 1fr 28px;min-height:0}
+#app{
+  height:100vh;
+  height:100dvh;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.titlebar{flex:0 0 42px}
+.tabs{flex:0 0 36px}
+.ribbon{flex:0 0 108px}
+.ruler{flex:0 0 28px}
+.workspace{flex:1 1 auto;min-height:0}
+.statusbar{flex:0 0 28px;min-height:28px}
 .titlebar{display:flex;align-items:center;background:var(--word-blue);color:#fff;padding:0 10px;gap:16px}
 .app-mark{display:flex;align-items:center;gap:8px;min-width:150px}
 .word-logo{display:grid;place-items:center;width:30px;height:30px;background:#fff;color:var(--word-blue);font-weight:700;border-radius:2px}
@@ -54,14 +67,14 @@ button{cursor:pointer}
 .file-btn span{font-size:11px;margin-top:4px}
 .layout-control{font-size:11px;display:flex;flex-direction:column;gap:4px}
 
-.findbar{position:absolute;z-index:20;top:190px;right:26px;background:#fff;border:1px solid #bbb;box-shadow:0 3px 12px rgba(0,0,0,.2);padding:7px;display:flex;gap:4px}
+.findbar{position:fixed;z-index:20;top:190px;right:26px;background:#fff;border:1px solid #bbb;box-shadow:0 3px 12px rgba(0,0,0,.2);padding:7px;display:flex;gap:4px}
 .findbar input{width:220px;padding:6px;border:1px solid #bbb}
 
 .ruler{height:28px;background:#f8f8f8;border-bottom:1px solid #d0d0d0;color:#777;display:flex;justify-content:center;gap:28px;font-size:10px;align-items:end;padding-bottom:4px;overflow:hidden}
 
-.workspace{overflow:auto;background:var(--workspace);padding:28px 24px 80px;display:flex;justify-content:center;align-items:flex-start}
+.workspace{overflow:auto;background:var(--workspace);padding:28px 24px 56px;display:flex;justify-content:center;align-items:flex-start;min-height:0;position:relative;scrollbar-gutter:stable}
 .workspace.no-shadow .page{box-shadow:none}
-.page{width:210mm;min-height:297mm;background:var(--paper);box-shadow:0 2px 10px rgba(0,0,0,.22);transform-origin:top center;transition:width .15s ease}
+.page{width:210mm;min-height:297mm;background:var(--paper);box-shadow:0 2px 10px rgba(0,0,0,.22);transform-origin:top center;transition:width .15s ease,box-shadow .15s ease;flex:0 0 auto;margin:0 auto}
 .page[data-orientation="landscape"]{width:297mm;min-height:210mm}
 .editor{min-height:calc(297mm - 50.8mm);outline:none;padding:25.4mm;line-height:1.15;font-family:Calibri,Arial,sans-serif;font-size:11pt;white-space:normal;overflow-wrap:anywhere}
 .page[data-orientation="landscape"] .editor{min-height:calc(210mm - 50.8mm)}
@@ -73,7 +86,7 @@ button{cursor:pointer}
 .editor img{max-width:100%;height:auto}
 .page-break{border:0;border-top:2px dashed #aaa;margin:24px 0;page-break-after:always}
 
-.statusbar{display:flex;align-items:center;justify-content:space-between;background:var(--status);border-top:1px solid #d0d0d0;padding:0 12px;font-size:11px;z-index:4}
+.statusbar{display:flex;align-items:center;justify-content:space-between;background:var(--status);border-top:1px solid #d0d0d0;padding:0 12px;font-size:11px;z-index:40;flex:0 0 28px;min-height:28px;width:100%;box-shadow:0 -1px 0 rgba(0,0,0,.03)}
 .statusbar>div{display:flex;gap:16px;align-items:center}
 .zoom-wrap{gap:5px!important}
 .zoom-wrap button{border:0;background:transparent}
@@ -85,7 +98,9 @@ body.focus-mode .titlebar,
 body.focus-mode .tabs,
 body.focus-mode .ribbon,
 body.focus-mode .ruler{display:none}
-body.focus-mode #app{grid-template-rows:1fr 28px}
+body.focus-mode #app{display:flex;flex-direction:column}
+body.focus-mode .workspace{flex:1 1 auto;min-height:0}
+body.focus-mode .statusbar{flex:0 0 28px}
 
 @media (max-width:900px){
   .save-state{display:none}
@@ -103,3 +118,11 @@ body.focus-mode #app{grid-template-rows:1fr 28px}
   .editor{padding:0}
 }
 \n/* Stage 2: imported DOCX fidelity helpers */\n.editor ol,.editor ul{margin-top:0;margin-bottom:8pt;padding-left:30pt}\n.editor li{margin-bottom:2pt}\n.editor a{color:#0563c1;text-decoration:underline}\n.editor sub{vertical-align:sub;font-size:.8em}.editor sup{vertical-align:super;font-size:.8em}\n
+
+/* Stage 3.1 UI layout fix: keep document viewport between ribbon and bottom status bar. */
+@supports (height:100dvh){html,body{height:100dvh}}
+@media (max-height:620px){
+  .ribbon{flex-basis:92px;min-height:92px}
+  .ribbon-panel{height:92px}
+  .workspace{padding-top:18px}
+}

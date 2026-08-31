@@ -1,4 +1,4 @@
-const CACHE_NAME = "fyde-word-stage2-v2.0.0";
+const CACHE_NAME = "fyde-word-stage3-ui-v3.1.0";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./css/app.css",
   "./js/app.js",
   "./js/docx-import.js",
+  "./js/docx-export.js",
   "./icons/icon.svg"
 ];
 

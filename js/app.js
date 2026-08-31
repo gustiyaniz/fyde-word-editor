@@ -14,8 +14,8 @@
   let dirty = false;
   let autosaveTimer = null;
 
-  const stateKey = "fydeword-stage1-autosave";
-  const prefsKey = "fydeword-stage1-prefs";
+  const stateKey = "fydeword-stage3-autosave";
+  const prefsKey = "fydeword-stage3-prefs";
 
   function toast(message) {
     const el = $("toast");
@@ -99,7 +99,7 @@
   async function newDocument() {
     if (dirty && !confirm("Dokumen belum disimpan. Buat dokumen baru?")) return;
     currentFileHandle = null;
-    currentFileType = "html";
+    currentFileType = "docx";
     title.value = "Document1";
     editor.innerHTML = "<p><br></p>";
     setDirty(false);
@@ -115,7 +115,7 @@
         const [handle] = await window.showOpenFilePicker({
           multiple: false,
           types: [{
-            description: "Dokumen Stage 1",
+            description: "Dokumen Fyde Word",
             accept: {
               "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
               "text/html": [".html", ".htm"],
@@ -152,7 +152,7 @@
       try {
         const result = await window.FydeDocx.importDocx(file);
         editor.innerHTML = result.html || "<p><br></p>";
-        currentFileType = "docx-import";
+        currentFileType = "docx";
         setDirty(false);
         updateStats();
         toast(`DOCX berhasil diimpor: ${name}`);
@@ -207,50 +207,115 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     await writable.close();
   }
 
-  async function saveDocument(forceSaveAs = false) {
-    const html = documentHtml();
-    if (currentFileType === "docx-import" && !forceSaveAs) {
-      toast("Stage 2: DOCX disimpan sebagai HTML");
-      forceSaveAs = true;
-      currentFileHandle = null;
-    }
+  function pageOptions() {
+    const preset = $("marginPreset").value;
+    const mm = {
+      normal: {top:25.4,right:25.4,bottom:25.4,left:25.4},
+      narrow: {top:12.7,right:12.7,bottom:12.7,left:12.7},
+      moderate: {top:19.05,right:25.4,bottom:19.05,left:25.4},
+      wide: {top:25.4,right:50.8,bottom:25.4,left:50.8}
+    }[preset] || {top:25.4,right:25.4,bottom:25.4,left:25.4};
+    const tw = x => Math.round(x / 25.4 * 1440);
+    return {
+      title: title.value || "Document1",
+      orientation: page.dataset.orientation || "portrait",
+      marginTwips:{top:tw(mm.top),right:tw(mm.right),bottom:tw(mm.bottom),left:tw(mm.left)}
+    };
+  }
+
+  async function buildDocx() {
+    if (!window.FydeDocxExport) throw new Error("DOCX exporter tidak tersedia");
+    return await window.FydeDocxExport.exportDocx(editor, pageOptions());
+  }
+
+  async function saveDocx(forceSaveAs = false) {
+    const blob = await buildDocx();
     if (!forceSaveAs && currentFileHandle && "createWritable" in currentFileHandle) {
       try {
-        await saveToHandle(currentFileHandle, html);
+        const writable = await currentFileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        currentFileType = "docx";
         setDirty(false);
-        toast("Dokumen disimpan");
+        toast("DOCX berhasil disimpan");
         return;
-      } catch {
-        toast("Tidak dapat menyimpan ke file tersebut");
+      } catch (err) {
+        console.error(err);
+        toast("Tidak dapat menulis ke DOCX asli; gunakan Save As");
+        forceSaveAs = true;
       }
     }
 
     if ("showSaveFilePicker" in window) {
       try {
         const handle = await window.showSaveFilePicker({
-          suggestedName: `${title.value || "Document1"}.html`,
+          suggestedName: `${title.value || "Document1"}.docx`,
           types: [{
-            description: "HTML Document",
-            accept: {"text/html": [".html"]}
+            description: "Word Document (.docx)",
+            accept: {"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}
           }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        currentFileHandle = handle;
+        currentFileType = "docx";
+        setDirty(false);
+        toast("DOCX berhasil disimpan");
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+        console.error(err);
+      }
+    }
+
+    downloadBlob(blob, `${title.value || "Document1"}.docx`, window.FydeDocxExport.DOCX_MIME);
+    currentFileType = "docx";
+    setDirty(false);
+  }
+
+  async function saveHtml(forceSaveAs = false) {
+    const html = documentHtml();
+    if (!forceSaveAs && currentFileHandle && currentFileType === "html" && "createWritable" in currentFileHandle) {
+      try {
+        await saveToHandle(currentFileHandle, html);
+        setDirty(false);
+        toast("HTML berhasil disimpan");
+        return;
+      } catch {}
+    }
+    if ("showSaveFilePicker" in window) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `${title.value || "Document1"}.html`,
+          types: [{description:"HTML Document",accept:{"text/html":[".html"]}}]
         });
         await saveToHandle(handle, html);
         currentFileHandle = handle;
         currentFileType = "html";
         setDirty(false);
-        toast("Dokumen disimpan");
+        toast("HTML berhasil disimpan");
         return;
-      } catch (err) {
-        if (err?.name === "AbortError") return;
-      }
+      } catch (err) { if (err?.name === "AbortError") return; }
     }
-
     downloadBlob(html, `${title.value || "Document1"}.html`, "text/html");
     setDirty(false);
   }
 
+  async function saveDocument(forceSaveAs = false) {
+    try {
+      if (currentFileType === "html" && !forceSaveAs) return await saveHtml(false);
+      return await saveDocx(forceSaveAs);
+    } catch (err) {
+      console.error(err);
+      toast("Gagal menyimpan dokumen");
+      alert("Dokumen tidak dapat disimpan.\n\n" + (err?.message || err));
+    }
+  }
+
   $("saveBtn").addEventListener("click", () => saveDocument(false));
   $("saveAsBtn").addEventListener("click", () => saveDocument(true));
+  $("exportDocxBtn")?.addEventListener("click", () => saveDocx(true));
   $("exportHtmlBtn").addEventListener("click", () => {
     downloadBlob(documentHtml(), `${title.value || "Document1"}.html`, "text/html");
   });
@@ -268,7 +333,7 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
   $("printBtn").addEventListener("click", () => window.print());
 
   $("docxInfoBtn")?.addEventListener("click", () => {
-    alert("DOCX Import v1 — Stage 2\n\nDidukung: paragraf, heading, bold/italic/underline/strike, font, ukuran, warna, highlight, alignment, indent/spacing, bullets/numbering umum, hyperlink, tabel dasar, dan gambar raster.\n\nStage 2 belum menulis kembali ke .docx. File DOCX yang telah diedit disimpan sebagai HTML agar file asli tidak rusak. DOCX Export akan dibuat pada Stage 3.");
+    alert("DOCX Import / Export v1 — Stage 3\n\nOpen: paragraf, heading, format teks, alignment, list, hyperlink, tabel dasar, dan gambar.\n\nSave DOCX: paragraf, heading, bold/italic/underline/strike, font/size/color/highlight, alignment, list, hyperlink, tabel, gambar data URL, page break, margin, dan orientation.\n\nFitur Word kompleks seperti comments, tracked changes, SmartArt, chart, text box dan macro belum dipertahankan.");
   });
 
   $("lineSpacingBtn")?.addEventListener("click", () => {
@@ -359,8 +424,20 @@ img{max-width:100%;height:auto}.page-break{page-break-after:always;border:0}
     value = Math.min(160, Math.max(60, value));
     $("zoomRange").value = value;
     $("zoomValue").textContent = `${value}%`;
-    page.style.transform = `scale(${value / 100})`;
-    page.style.marginBottom = `${(value - 100) * 3}px`;
+
+    // Chromium/FydeOS: CSS zoom participates in layout, so the page keeps
+    // its real scrollable size and never visually overlaps the status bar.
+    if ("zoom" in page.style) {
+      page.style.zoom = `${value}%`;
+      page.style.transform = "none";
+      page.style.marginBottom = "0";
+    } else {
+      // Fallback for engines without CSS zoom.
+      page.style.zoom = "";
+      page.style.transform = `scale(${value / 100})`;
+      page.style.transformOrigin = "top center";
+      page.style.marginBottom = `${Math.max(0, (value - 100) * 8)}px`;
+    }
     savePrefs();
   }
 
